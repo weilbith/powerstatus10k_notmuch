@@ -9,6 +9,8 @@
 # Implement the interface function for the initial subscription state.
 #
 function initState_notmuch {
+  # Trigger hook for first time to get current state.
+  $(dirname ${BASH_SOURCE[0]})/notmuch_hook.py &
   STATE="${NOTMUCH_ICON_MESSAGES} 0 ${NOTMUCH_ICON_ACCOUNTS} 0"
 }
 
