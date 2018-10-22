@@ -8,13 +8,39 @@ from functools import reduce
 
 
 class NotmuchHook:
-    database = None
     fifoName = '/tmp/powerstatus_segment_notmuch'
-    unread_query = 'is:unread and is:inbox'
-    flagged_query_tuples = [] 
+    database = None
+
+    # Files where to search for stored queries by the segment handler.
+    unread_query_file = '/tmp/powerstatus_segment_notmuch_unread_query'
+    color_query_tuples_file = '/tmp/powerstatus_segment_notmuch_color_query_tuples'
+
+    unread_query = None
+    color_query_tuples = None
+
 
     def __init__(self):
         self.database = notmuch.Database()
+
+        # Read the unread query file provided by the segment handler.
+        try:
+            with open(self.unread_query_file, 'r') as file:
+                self.unread_query = file.read()
+
+        except:
+            raise
+        
+        # Read the color query tuples file and parse each line provided by the segment handler.
+        try:
+            self.color_query_tuples = []
+
+            with open(self.color_query_tuples_file, 'r') as file:
+                for line in file.readlines():
+                   self.color_query_tuples.append(line.rsplit('=', 1))
+
+        except:
+            raise
+
 
     def pipe(self, state):
         # Create the FIFO if not exist yet.
@@ -26,9 +52,11 @@ class NotmuchHook:
         with open(self.fifoName, 'w') as fifo:
             fifo.write(state)
 
+
     def unread_message_count(self):
         query = notmuch.Query(self.database, self.unread_query)
         return query.count_messages()
+
 
     def differing_address_count(self):
         messages = notmuch.Query(self.database, self.unread_query).search_messages()
@@ -42,9 +70,10 @@ class NotmuchHook:
         # The number of keys are the amount of individual addresses.
         return len(address_list)
 
-    def flagged_message_color(self):
+
+    def state_color(self):
         # Check for query hits in the list.
-        for query_tuple in self.flagged_query_tuples:
+        for query_tuple in self.color_query_tuples:
             query = self.unread_query + ' and (' + query_tuple[0] + ')'
             count = notmuch.Query(self.database, query).count_messages()
 
@@ -54,12 +83,13 @@ class NotmuchHook:
 
         return ''
 
+
     def run(self):
         # Get all relevant data for the state to pipe.
         unread_count = self.unread_message_count()
         address_count = self.differing_address_count()
-        flagged_color = self.flagged_message_color()
-        state = reduce((lambda x, y: str(x) + ' ' + str(y)), [unread_count, address_count, flagged_color])
+        color = self.state_color()
+        state = reduce((lambda x, y: str(x) + ' ' + str(y)), [unread_count, address_count, color])
         self.pipe(state)
 
 
