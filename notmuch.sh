@@ -5,12 +5,23 @@
 
 
 # Format the given information into the string with icons.
+# Set the highlight color if given.
+#
+# Arguments:
+#   $1 - number of unread messages
+#   $2 - number of different addresses
+#   $3 - color to highlight (optional)
 #
 function formatState {
-  echo "${NOTMUCH_ICON_MESSAGES} $1 ${NOTMUCH_ICON_SEPARATOR} ${NOTMUCH_ICON_ACCOUNTS} $2"
+  formatString="${NOTMUCH_ICON_MESSAGES} $1 ${NOTMUCH_ICON_SEPARATOR} ${NOTMUCH_ICON_ADDRESSES} $2"
+
+  [[ -n "$3" ]] && formatString="%{F${3}}${formatString}%{F-}"
+
+  echo "$formatString"
 }
 
-# Interface
+
+# Segment Interface
 
 # Implement the interface function for the initial subscription state.
 #
@@ -23,9 +34,10 @@ function initState_notmuch {
 # Implement the interface function to format the current state of the subscription.
 #
 function format_notmuch {
-  IFS=' ' read -ra numbers <<< "$1"
-  messages="${numbers[0]}"
-  accounts="${numbers[1]}"
-  eval "state=\$(formatState ${messages} ${accounts})"
+  IFS=' ' read -ra status <<< "$1"
+  messages="${status[0]}"
+  accounts="${status[1]}"
+  color="${status[2]}"
+  eval "state=\$(formatState \"${messages}\" \"${accounts}\" \"${color}\")"
   STATE="$state"
 }
