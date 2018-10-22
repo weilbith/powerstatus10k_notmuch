@@ -5,38 +5,43 @@ import os
 import notmuch
 from email.utils import parseaddr
 
-# Properties
-fifoName = '/tmp/powerstatus_segment_notmuch'
 
-# Query Notmuch and get the count.
-query = notmuch.Query(notmuch.Database(), 'is:unread and is:inbox')
+class NotmuchHook:
+    fifoName = '/tmp/powerstatus_segment_notmuch'
+    query = None
 
-# Pipe the current state to the FIFO.
-def pipe(state):
-    # Create the FIFO if not exist yet.
-    # Do it here, to avoid problems on a deleted FIFO during runtime.
-    if not os.path.exists(fifoName):
-        os.mkfifo(fifoName)
+    def __init__(self):
+        self.query = notmuch.Query(notmuch.Database(), 'is:unread and is:inbox')
 
-    # Write to the FIFO.
-    with open(fifoName, 'w') as fifo:
-        fifo.write(state)
+    def pipe(self, state):
+        # Create the FIFO if not exist yet.
+        # Do it here, to avoid problems on a deleted FIFO during runtime.
+        if not os.path.exists(self.fifoName):
+            os.mkfifo(self.fifoName)
 
-def get_message_count():
-    return query.count_messages()
+        # Write to the FIFO.
+        with open(self.fifoName, 'w') as fifo:
+            fifo.write(state)
 
-def get_address_count():
-    messages = query.search_messages()
-    address_list = dict()
+    def get_message_count(self):
+        return self.query.count_messages()
 
-    for message in messages:
-        name, address = parseaddr(message.get_header('To'))
-        address_list[address] = None
+    def get_address_count(self):
+        messages = self.query.search_messages()
+        address_list = dict()
 
-    return len(address_list)
+        for message in messages:
+            name, address = parseaddr(message.get_header('To'))
+            address_list[address] = None
+
+        return len(address_list)
+
+    def run(self):
+        message_count = self.get_message_count()
+        address_count = self.get_address_count()
+        state = str(message_count) + ' ' + str(address_count)
+        self.pipe(state)
 
 
-message_count = get_message_count()
-address_count = get_address_count()
-state = str(message_count) + ' ' + str(address_count)
-pipe(state)
+# Getting started
+NotmuchHook().run()
