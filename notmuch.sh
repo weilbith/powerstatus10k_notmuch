@@ -4,8 +4,10 @@
 # This segment displays the current mail status by notmuch.
 
 # Properties
-UNREAD_QUERY_FILE='/tmp/powerstatus_segment_notmuch_unread_query'
-COLOR_QUERY_TUPLES_FILE='/tmp/powerstatus_segment_notmuch_color_query_tuples'
+NAME="notmuch"
+EXCHANGE_DIR="${POWERSTATUS10K_DIR_RUNTIME}/${NAME}"
+UNREAD_QUERY_FILE="${EXCHANGE_DIR}/unread_query"
+COLOR_QUERY_TUPLES_FILE="${EXCHANGE_DIR}/color_query_tuples"
 
 
 # Format the given information into the string with icons.
@@ -28,8 +30,11 @@ function formatState {
 #
 function writeQueries {
   # Delete possible old queries.
-  rm -f $UNREAD_QUERY_FILE
-  rm -f $COLOR_QUERY_TUPLES_FILE
+  rm -f "$UNREAD_QUERY_FILE"
+  rm -f "$COLOR_QUERY_TUPLES_FILE"
+
+  # Create the exchange dirctory if not already exist.
+  mkdir -p "$EXCHANGE_DIR"
 
   # Write unread query.
   echo "$NOTMUCH_QUERY_UNREAD" >> "$UNREAD_QUERY_FILE"
@@ -52,7 +57,7 @@ function initState_notmuch {
   writeQueries
 
   # Trigger hook for first time to get current state.
-  $(dirname ${BASH_SOURCE[0]})/notmuch_hook.py &
+  "$(dirname "${BASH_SOURCE[0]}")/notmuch_hook.py" &
   STATE="$(formatState 0 0)"
 }
 
@@ -64,5 +69,6 @@ function format_notmuch {
   accounts="${status[1]}"
   color="${status[2]}"
   eval "state=\$(formatState \"${messages}\" \"${accounts}\" \"${color}\")"
+  # shellcheck disable=SC2034,SC2154
   STATE="$state"
 }

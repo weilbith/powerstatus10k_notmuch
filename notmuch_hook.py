@@ -8,12 +8,14 @@ from functools import reduce
 
 
 class NotmuchHook:
-    fifoName = '/tmp/powerstatus_segment_notmuch'
+    runtime_dir = os.getenv('XDG_RUNTIME_DIR', '/tmp') + '/powerstatus10k'
+    exchange_dir = runtime_dir + '/notmuch'
+    fifo_name = runtime_dir + '/fifos/notmuch'
     database = None
 
     # Files where to search for stored queries by the segment handler.
-    unread_query_file = '/tmp/powerstatus_segment_notmuch_unread_query'
-    color_query_tuples_file = '/tmp/powerstatus_segment_notmuch_color_query_tuples'
+    unread_query_file = exchange_dir + '/unread_query'
+    color_query_tuples_file = exchange_dir + '/color_query_tuples'
 
     unread_query = None
     color_query_tuples = None
@@ -45,11 +47,11 @@ class NotmuchHook:
     def pipe(self, state):
         # Create the FIFO if not exist yet.
         # Do it here, to avoid problems on a deleted FIFO during runtime.
-        if not os.path.exists(self.fifoName):
-            os.mkfifo(self.fifoName)
+        if not os.path.exists(self.fifo_name):
+            os.mkfifo(self.fifo_name)
 
         # Write to the FIFO.
-        with open(self.fifoName, 'w') as fifo:
+        with open(self.fifo_name, 'w') as fifo:
             fifo.write(state)
 
 
